@@ -7,13 +7,40 @@ on:
     tags: ["*"]
 
 jobs:
+  extract-version:
+    runs-on: ubuntu-latest
+    outputs:
+      postgres_version: ${{ steps.extract.outputs.postgres_version }}
+      debian_version: ${{ steps.extract.outputs.debian_version }}
+      revision: ${{ steps.extract.outputs.revision }}
+    steps:
+      - name: Extract version components
+        id: extract
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" && "${{ github.ref_name }}" != "latest" && "${{ github.ref_name }}" == v* ]]; then
+            # Remove 'v' prefix and split version
+            VERSION="${{ github.ref_name }}"
+            VERSION=${VERSION#v}  # Remove v prefix
+            POSTGRES_VERSION=$(echo $VERSION | cut -d'-' -f1)
+            DEBIAN_VERSION=$(echo $VERSION | cut -d'-' -f3)
+            REVISION=$(echo $VERSION | cut -d'-' -f4)
+          else
+            POSTGRES_VERSION="17.4.0"
+            DEBIAN_VERSION="12"
+            REVISION="r19"
+          fi
+          echo "postgres_version=$POSTGRES_VERSION" >> $GITHUB_OUTPUT
+          echo "debian_version=$DEBIAN_VERSION" >> $GITHUB_OUTPUT
+          echo "revision=$REVISION" >> $GITHUB_OUTPUT
+
   call-docker-build:
+    needs: extract-version
     uses: ethdevops/workflows/.github/workflows/basic-docker-build.yaml@main
     with:
       build_args: |
-        POSTGRES_VERSION=${{ github.ref_type == 'tag' && github.ref_name != 'latest' && startsWith(github.ref_name, 'v') && split(github.ref_name, '-')[0] || '17.4.0' }}
-        DEBIAN_VERSION=${{ github.ref_type == 'tag' && github.ref_name != 'latest' && startsWith(github.ref_name, 'v') && split(github.ref_name, '-')[2] || '12' }}
-        REVISION=${{ github.ref_type == 'tag' && github.ref_name != 'latest' && startsWith(github.ref_name, 'v') && split(github.ref_name, '-')[3] || 'r19' }}
+        POSTGRES_VERSION=${{ needs.extract-version.outputs.postgres_version }}
+        DEBIAN_VERSION=${{ needs.extract-version.outputs.debian_version }}
+        REVISION=${{ needs.extract-version.outputs.revision }}
     secrets:
       docker_registry_user: ${{ secrets.DOCKER_REGISTRY_USER }}
       docker_registry_password: ${{ secrets.DOCKER_REGISTRY_SECRET }}
