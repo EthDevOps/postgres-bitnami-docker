@@ -10,6 +10,7 @@ USER root
 RUN install_packages git build-essential \
     && git clone --branch v0.8.0 https://github.com/pgvector/pgvector.git \
     && cd pgvector \
+    && export PG_CONFIG=/opt/bitnami/postgresql/bin/pg_config \
     && make \
     && make install \
     && cd .. \
