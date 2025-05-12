@@ -1,4 +1,8 @@
-FROM docker.io/bitnami/postgresql:17.4.0-debian-12-r19
+ARG POSTGRES_VERSION=17.4.0
+ARG DEBIAN_VERSION=12
+ARG REVISION=r19
+
+FROM docker.io/bitnami/postgresql:${POSTGRES_VERSION}-debian-${DEBIAN_VERSION}-${REVISION}
 
 USER root
 
